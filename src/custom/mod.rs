@@ -1,5 +1,6 @@
 mod handel_errors;
 use handel_errors::VekError;
+
 use num_traits::{
     ops::checked::{CheckedAdd, CheckedMul, CheckedSub},
     Num,
@@ -70,6 +71,23 @@ impl<T> Vek<T> {
         Some(unsafe { self.ptr.as_ptr().add(index).read() })
     }
 
+    pub fn pop(&mut self) -> Option<T> {
+        if self.len == 0 {
+            return None;
+        }
+        self.len -= 1;
+        Some(unsafe { self.ptr.as_ptr().add(self.len).read() })
+    }
+
+    pub fn clear(&mut self) {
+        unsafe {
+            std::ptr::drop_in_place(std::slice::from_raw_parts_mut(self.ptr.as_ptr(), self.len));
+        }
+        self.dealloc_all();
+        self.capacity = 0;
+        self.len = 0;
+    }
+
     pub fn len(&self) -> usize {
         self.len
     }
@@ -94,6 +112,7 @@ impl<T> Vek<T> {
                 "can not allocating memory for zero type data",
             ));
         }
+
         Ok(())
     }
 
@@ -236,17 +255,9 @@ impl<T> Vek<T> {
             None => Err(VekError::OverFlow("can not reach memory location")),
         }
     }
-}
 
-impl<T> Drop for Vek<T> {
-    fn drop(&mut self) {
-        if self.capacity == 0usize {
-            return;
-        }
-
+    fn dealloc_all(&mut self) {
         unsafe {
-            std::ptr::drop_in_place(std::slice::from_raw_parts_mut(self.ptr.as_ptr(), self.len));
-
             let layout = alloc::Layout::from_size_align_unchecked(
                 std::mem::size_of::<T>() * self.capacity,
                 std::mem::align_of::<T>(),
@@ -256,3 +267,36 @@ impl<T> Drop for Vek<T> {
         }
     }
 }
+
+impl<T> Drop for Vek<T> {
+    fn drop(&mut self) {
+        if self.capacity == 0usize {
+            return;
+        }
+
+        unsafe {
+            std::ptr::drop_in_place(std::slice::from_raw_parts_mut(self.ptr.as_ptr(), self.len))
+        };
+        self.dealloc_all();
+    }
+}
+
+// pub struct VeKIntoIterator<T> {
+//     index: usize,
+//     item: T,
+// }
+//
+// impl<T> IntoIterator for Vek<T> {
+//     type Item = T;
+//     type IntoIter = VeKIntoIterator<Self::Item>;
+//     fn into_iter(self) -> Self::IntoIter {
+//         VeKIntoIterator {
+//             item: self.get(0),
+//             index: 0,
+//         }
+//     }
+// }
+// impl<T> Iterator for Vek<T> {
+//     type Item = T;
+//     fn next(&mut self) -> Option<Self::Item> {}
+// }

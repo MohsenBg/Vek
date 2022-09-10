@@ -5,16 +5,6 @@ mod tests {
 
     use crate::custom::Vek;
     #[test]
-    fn test_vek() {
-        let mut vec = Vec::new();
-        vec.push(1usize);
-        vec.push(2);
-        vec.push(3);
-        assert_eq!(vec.capacity(), 4);
-        assert_eq!(vec.len(), 3);
-    }
-
-    #[test]
     fn empty_vek() {
         let vek: Vek<usize> = Vek::new();
         assert_eq!(vek.len(), 0usize);
@@ -42,5 +32,42 @@ mod tests {
         for idx in 0..vek.len() {
             assert_eq!(vek.get(idx), Some(idx + 1));
         }
+        assert_eq!(vek.get(6), None);
+    }
+
+    #[test]
+    fn pop() {
+        let mut vek: Vek<usize> = Vek::new();
+        vek.push(1);
+        vek.push(2);
+        vek.push(3);
+        vek.push(4);
+        vek.push(5);
+
+        let current_len = vek.len();
+        vek.pop();
+        vek.pop();
+        vek.pop();
+
+        for idx in 0..vek.len() {
+            assert_eq!(vek.get(idx), Some(idx + 1));
+        }
+
+        for idx in vek.len() + 1..current_len {
+            assert_eq!(vek.get(idx), None);
+        }
+    }
+
+    #[test]
+    fn clear() {
+        let mut vek: Vek<usize> = Vek::new();
+        vek.push(1);
+        vek.push(2);
+        vek.push(3);
+        vek.push(4);
+        vek.push(5);
+        vek.clear();
+        assert_eq!(vek.len(), 0usize);
+        assert_eq!(vek.capacity(), 0usize);
     }
 }
