@@ -63,14 +63,29 @@ impl<T> Vek<T> {
         }
     }
 
-    pub fn get(&self, index: usize) -> Option<T> {
+    pub fn get(&self, index: usize) -> Option<&T> {
+        if index >= self.len {
+            return None;
+        }
+
+        Some(unsafe { &*self.ptr.as_ptr().add(index) })
+    }
+
+    pub fn get_mut<'a>(&self, index: usize) -> Option<&'a mut T> {
+        if index >= self.len {
+            return None;
+        }
+
+        Some(unsafe { &mut *self.ptr.as_ptr().add(index) })
+    }
+
+    fn get_ptr_slice(&self, index: usize) -> Option<T> {
         if index >= self.len {
             return None;
         }
 
         Some(unsafe { self.ptr.as_ptr().add(index).read() })
     }
-
     pub fn pop(&mut self) -> Option<T> {
         if self.len == 0 {
             return None;
@@ -86,6 +101,14 @@ impl<T> Vek<T> {
         self.dealloc_all();
         self.capacity = 0;
         self.len = 0;
+    }
+
+    pub fn is_empty(&self) -> bool {
+        if self.len == 0 {
+            return false;
+        };
+
+        true
     }
 
     pub fn len(&self) -> usize {
@@ -245,11 +268,11 @@ impl<T> Vek<T> {
         match check_overflow {
             Some(offset) => {
                 if offset < isize::MAX as usize {
-                    return Ok(());
+                    Ok(())
                 } else {
-                    return Err(VekError::OverFlow(
+                    Err(VekError::OverFlow(
                         "Can not write on memory cause overflow on memory",
-                    ));
+                    ))
                 }
             }
             None => Err(VekError::OverFlow("can not reach memory location")),
@@ -281,22 +304,86 @@ impl<T> Drop for Vek<T> {
     }
 }
 
-// pub struct VeKIntoIterator<T> {
-//     index: usize,
-//     item: T,
-// }
-//
-// impl<T> IntoIterator for Vek<T> {
-//     type Item = T;
-//     type IntoIter = VeKIntoIterator<Self::Item>;
-//     fn into_iter(self) -> Self::IntoIter {
-//         VeKIntoIterator {
-//             item: self.get(0),
-//             index: 0,
-//         }
-//     }
-// }
-// impl<T> Iterator for Vek<T> {
-//     type Item = T;
-//     fn next(&mut self) -> Option<Self::Item> {}
-// }
+impl<T> Default for Vek<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a Vek<T> {
+    type Item = &'a T;
+    type IntoIter = VekIteratorRef<'a, T>;
+    fn into_iter(self) -> Self::IntoIter {
+        VekIteratorRef {
+            vek: self,
+            index: 0,
+        }
+    }
+}
+
+impl<'a, T> IntoIterator for &'a mut Vek<T> {
+    type Item = &'a mut T;
+    type IntoIter = VekIteratorMutRef<'a, T>;
+    fn into_iter(self) -> Self::IntoIter {
+        VekIteratorMutRef {
+            vek: self,
+            index: 0,
+        }
+    }
+}
+
+impl<T> IntoIterator for Vek<T> {
+    type Item = T;
+    type IntoIter = VekIterator<T>;
+    fn into_iter(self) -> VekIterator<T> {
+        VekIterator {
+            vek: self,
+            index: 0,
+        }
+    }
+}
+
+pub struct VekIteratorRef<'a, T> {
+    vek: &'a Vek<T>,
+    index: usize,
+}
+
+pub struct VekIteratorMutRef<'a, T> {
+    vek: &'a mut Vek<T>,
+    index: usize,
+}
+
+pub struct VekIterator<T> {
+    vek: Vek<T>,
+    index: usize,
+}
+
+impl<'a, T> Iterator for VekIteratorRef<'a, T> {
+    type Item = &'a T;
+    fn next(&mut self) -> Option<Self::Item> {
+        let current_index = self.index;
+        let current_item = self.vek.get(current_index);
+        self.index += 1;
+        current_item
+    }
+}
+
+impl<'a, T> Iterator for VekIteratorMutRef<'a, T> {
+    type Item = &'a mut T;
+    fn next(&mut self) -> Option<Self::Item> {
+        let current_index = self.index;
+        let current_item = self.vek.get_mut(current_index);
+        self.index += 1;
+        current_item
+    }
+}
+
+impl<T> Iterator for VekIterator<T> {
+    type Item = T;
+    fn next(&mut self) -> Option<Self::Item> {
+        let current_index = self.index;
+        let current_item = self.vek.get_ptr_slice(current_index);
+        self.index += 1;
+        current_item
+    }
+}
