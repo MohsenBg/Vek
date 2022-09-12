@@ -1,9 +1,9 @@
+#[macro_use]
 pub mod custom;
 
 #[cfg(test)]
 mod tests {
-
-    use crate::custom::Vek;
+    use crate::custom::vek::Vek;
     #[test]
     fn empty_vek() {
         let vek: Vek<usize> = Vek::new();
@@ -79,6 +79,8 @@ mod tests {
         vek.push(3);
         vek.push(4);
         vek.push(5);
+
+        #[allow(unused)]
         let mut value = 1usize;
 
         value = 1usize;
@@ -94,6 +96,41 @@ mod tests {
         }
 
         value = 1usize;
+        for item in vek {
+            assert_eq!(item, value);
+            value += 1usize;
+        }
+    }
+
+    #[test]
+    fn macro_empty_vek() {
+        let vek: Vek<usize> = vek![];
+        assert_eq!(vek.len(), 0usize);
+        assert_eq!(vek.capacity(), 0usize);
+    }
+
+    #[test]
+    fn macro_multi_value_vek() {
+        let vek: Vek<usize> = vek![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        let mut value = 1usize;
+        for item in vek {
+            assert_eq!(item, value);
+            value += 1usize;
+        }
+    }
+
+    #[test]
+    fn macro_count_vek() {
+        let vek: Vek<usize> = vek![5;10];
+        for item in vek {
+            assert_eq!(item, 5);
+        }
+    }
+
+    #[test]
+    fn macro_vek_range() {
+        let vek: Vek<usize> = vek![1=>10];
+        let mut value = 1usize;
         for item in vek {
             assert_eq!(item, value);
             value += 1usize;
